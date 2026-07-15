@@ -1,6 +1,21 @@
 import os
 import yt_dlp
 
+from config import COOKIES
+
+COOKIE_FILE = "cookies.txt"
+
+
+def create_cookie_file():
+
+    if not COOKIES:
+        return None
+
+    with open(COOKIE_FILE, "w", encoding="utf8") as f:
+        f.write(COOKIES)
+
+    return COOKIE_FILE
+
 from config import MAX_FILE_SIZE, DOWNLOAD_DIR
 
 
