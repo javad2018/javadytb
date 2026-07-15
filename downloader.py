@@ -83,8 +83,8 @@ class Downloader:
 
         cookie = create_cookie_file()
 
-if cookie:
-    opts["cookiefile"] = cookie
+        if cookie:
+            opts["cookiefile"] = cookie
 
         
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -129,8 +129,8 @@ if cookie:
 
         cookie = create_cookie_file()
 
-if cookie:
-    opts["cookiefile"] = cookie
+        if cookie:
+            opts["cookiefile"] = cookie
 
         with yt_dlp.YoutubeDL(opts) as ydl:
 
@@ -163,5 +163,6 @@ if cookie:
                 os.remove(path)
         except:
             pass
+            
             if os.path.exists("cookies.txt"):
-    os.remove("cookies.txt")
+                os.remove("cookies.txt")
