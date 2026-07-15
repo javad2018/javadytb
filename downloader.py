@@ -27,11 +27,15 @@ class Downloader:
     @staticmethod
     def video_info(url: str):
 
+        cookie = create_cookie_file()
         opts = {
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
         }
+
+        if cookie:
+    opts["cookiefile"] = cookie
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
