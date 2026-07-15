@@ -81,6 +81,12 @@ class Downloader:
             "quiet": True,
         }
 
+        cookie = create_cookie_file()
+
+if cookie:
+    opts["cookiefile"] = cookie
+
+        
         with yt_dlp.YoutubeDL(opts) as ydl:
 
             info = ydl.extract_info(url, download=True)
@@ -121,6 +127,11 @@ class Downloader:
             ],
         }
 
+        cookie = create_cookie_file()
+
+if cookie:
+    opts["cookiefile"] = cookie
+
         with yt_dlp.YoutubeDL(opts) as ydl:
 
             info = ydl.extract_info(url, download=True)
@@ -152,3 +163,5 @@ class Downloader:
                 os.remove(path)
         except:
             pass
+            if os.path.exists("cookies.txt"):
+    os.remove("cookies.txt")
