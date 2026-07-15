@@ -35,7 +35,7 @@ class Downloader:
         }
 
         if cookie:
-    opts["cookiefile"] = cookie
+            opts["cookiefile"] = cookie
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
