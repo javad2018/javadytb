@@ -1,49 +1,64 @@
 import os
 import yt_dlp
 
-from config import COOKIES
+from config import DOWNLOAD_DIR, MAX_FILE_SIZE
+
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 COOKIE_FILE = "cookies.txt"
 
 
 def create_cookie_file():
 
-    if not COOKIES:
+    cookies = os.getenv("YT_COOKIES")
+
+    if not cookies:
         return None
 
-    with open(COOKIE_FILE, "w", encoding="utf8") as f:
-        f.write(COOKIES)
+    if os.path.exists(COOKIE_FILE):
+        return COOKIE_FILE
+
+    with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+        f.write(cookies)
 
     return COOKIE_FILE
-
-from config import MAX_FILE_SIZE, DOWNLOAD_DIR
-
-
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 class Downloader:
 
     @staticmethod
-    def video_info(url: str):
+    def video_info(url):
 
         cookie = create_cookie_file()
+
         opts = {
             "quiet": True,
             "no_warnings": True,
-            "skip_download": True,
+            "extract_flat": False,
+            "noplaylist": True,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": [
+                        "android",
+                        "web"
+                    ]
+                }
+            }
         }
 
         if cookie:
             opts["cookiefile"] = cookie
 
         with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=False)
+            return ydl.extract_info(
+                url,
+                download=False
+            )
 
     @staticmethod
     def qualities(info):
 
-        result = {}
+        q = {}
 
         for f in info.get("formats", []):
 
@@ -58,35 +73,56 @@ class Downloader:
             if h > 1080:
                 continue
 
-            if h not in result:
-                result[h] = True
+            q[h] = True
 
-        return sorted(result.keys())
+        return sorted(q.keys())
 
     @staticmethod
     def download_video(url, quality):
 
-        out = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+        cookie = create_cookie_file()
+
+        output = os.path.join(
+            DOWNLOAD_DIR,
+            "%(title)s.%(ext)s"
+        )
 
         fmt = (
             f"bestvideo[height<={quality}]"
-            f"+bestaudio/"
+            "+bestaudio/"
             f"best[height<={quality}]"
         )
 
         opts = {
-            "format": fmt,
-            "merge_output_format": "mp4",
-            "outtmpl": out,
-            "quiet": True,
-        }
 
-        cookie = create_cookie_file()
+            "format": fmt,
+
+            "merge_output_format": "mp4",
+
+            "outtmpl": output,
+
+            "quiet": True,
+
+            "noplaylist": True,
+
+            "retries": 5,
+
+            "fragment_retries": 5,
+
+            "extractor_args": {
+                "youtube": {
+                    "player_client": [
+                        "android",
+                        "web"
+                    ]
+                }
+            }
+
+        }
 
         if cookie:
             opts["cookiefile"] = cookie
 
-        
         with yt_dlp.YoutubeDL(opts) as ydl:
 
             info = ydl.extract_info(url, download=True)
@@ -96,28 +132,55 @@ class Downloader:
             filename = os.path.splitext(filename)[0] + ".mp4"
 
             if not os.path.exists(filename):
+
                 for f in os.listdir(DOWNLOAD_DIR):
+
                     if f.endswith(".mp4"):
-                        filename = os.path.join(DOWNLOAD_DIR, f)
+
+                        filename = os.path.join(
+                            DOWNLOAD_DIR,
+                            f
+                        )
+
                         break
+
+            if not os.path.exists(filename):
+                raise Exception("Video file not found")
 
             size = os.path.getsize(filename)
 
             if size > MAX_FILE_SIZE:
                 os.remove(filename)
-                raise Exception("File larger than Telegram limit")
+                raise Exception(
+                    "فایل از 50 مگابایت بزرگ‌تر است."
+                )
 
             return filename, info
 
     @staticmethod
     def download_audio(url):
 
-        out = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+        cookie = create_cookie_file()
+
+        output = os.path.join(
+            DOWNLOAD_DIR,
+            "%(title)s.%(ext)s"
+        )
 
         opts = {
+
             "format": "bestaudio/best",
-            "outtmpl": out,
+
+            "outtmpl": output,
+
             "quiet": True,
+
+            "noplaylist": True,
+
+            "retries": 5,
+
+            "fragment_retries": 5,
+
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -125,44 +188,63 @@ class Downloader:
                     "preferredquality": "192",
                 }
             ],
-        }
 
-        cookie = create_cookie_file()
+            "extractor_args": {
+                "youtube": {
+                    "player_client": [
+                        "android",
+                        "web"
+                    ]
+                }
+            }
+
+        }
 
         if cookie:
             opts["cookiefile"] = cookie
 
         with yt_dlp.YoutubeDL(opts) as ydl:
 
-            info = ydl.extract_info(url, download=True)
+            info = ydl.extract_info(
+                url,
+                download=True
+            )
 
-            mp3 = None
+        mp3 = None
 
-            for f in os.listdir(DOWNLOAD_DIR):
+        for f in os.listdir(DOWNLOAD_DIR):
 
-                if f.endswith(".mp3"):
-                    mp3 = os.path.join(DOWNLOAD_DIR, f)
-                    break
+            if f.endswith(".mp3"):
 
-            if mp3 is None:
-                raise Exception("Audio not generated")
+                mp3 = os.path.join(
+                    DOWNLOAD_DIR,
+                    f
+                )
 
-            size = os.path.getsize(mp3)
+                break
 
-            if size > MAX_FILE_SIZE:
-                os.remove(mp3)
-                raise Exception("File larger than Telegram limit")
+        if mp3 is None:
+            raise Exception("MP3 file not found")
 
-            return mp3, info
+        size = os.path.getsize(mp3)
+
+        if size > MAX_FILE_SIZE:
+
+            os.remove(mp3)
+
+            raise Exception(
+                "فایل از 50 مگابایت بزرگ‌تر است."
+            )
+
+        return mp3, info
 
     @staticmethod
     def cleanup(path):
 
         try:
-            if os.path.exists(path):
+
+            if path and os.path.exists(path):
                 os.remove(path)
-        except:
+
+        except Exception:
             pass
-            
-            if os.path.exists("cookies.txt"):
-                os.remove("cookies.txt")
